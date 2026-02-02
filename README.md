@@ -49,6 +49,7 @@ From [ThibautBaissac/rails_ai_agents](https://github.com/ThibautBaissac/rails_ai
 | `/research_codebase` | Document and explain existing code without suggesting changes. Creates research documents in `thoughts/shared/research/` |
 | `/create_plan` | Interactive planning workflow to create detailed implementation plans in `thoughts/shared/plans/` |
 | `/implement_plan` | Execute implementation plans phase by phase with verification checkpoints |
+| `/vibe2win` | Translate informal "vibe instructions" into structured technical specs before coding |
 
 ## Setup
 

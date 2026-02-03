@@ -122,6 +122,34 @@ If everything breaks:
 6. [ ] Restore beads.db from backup (if available)
 7. [ ] Restore memory files from backup (if available)
 
+## ngrok Tunnels & Authentication
+
+**Preferred auth method: ngrok OAuth with Google**
+
+When exposing local services via ngrok, use OAuth instead of basic auth:
+
+```yaml
+tunnels:
+  my-service:
+    proto: http
+    addr: 3088
+    url: myservice.ngrok.app
+    oauth:
+      provider: google
+      allow_emails:
+        - "carl.fyffe@gmail.com"
+```
+
+This is cleaner than managing passwords and integrates with existing Google account.
+
+**Current tunnels:**
+- `siarex.ngrok.app` → OpenClaw (18789)
+- `siathinks.ngrok.app` → Second Brain (3333)
+- `llappy.ngrok.app` → LLAPP (3077)
+- `codee-memory.ngrok.app` → Beads UI (3088) - OAuth protected
+
+Config location: `~/Library/Application Support/ngrok/ngrok.yml`
+
 ## Version Info
 
 As of 2026-02-03:

@@ -36,17 +36,17 @@ Each phase has explicit outputs and requires human approval before proceeding.
    ```bash
    git worktree add ~/wt/{{PROJECT_NAME}}/{{BRANCH_NAME}}-wt -b feature/{{BRANCH_NAME}}
    ```
-2. Create `.vibe/` directory in worktree for artifacts
+2. Ensure `thoughts/` directory exists in worktree for artifacts
 3. Create epic bead:
    ```bash
    bd create "[EPIC] {{FEATURE_SUMMARY}}" --prefix {{PROJECT_PREFIX}} -p 1 -t epic
    ```
-4. Save epic state to `.vibe/epic.yaml`
+4. Save epic state to `thoughts/{{BRANCH_NAME}}/epic.yaml`
 
 **Outputs:**
 - Worktree at `~/wt/{{PROJECT_NAME}}/{{BRANCH_NAME}}-wt`
 - Epic bead created (e.g., `llapp-a1b2`)
-- `.vibe/epic.yaml` with bead ID and phase tracking
+- `thoughts/{{BRANCH_NAME}}/epic.yaml` with bead ID and phase tracking
 
 ---
 
@@ -59,7 +59,7 @@ Each phase has explicit outputs and requires human approval before proceeding.
 
 **Outputs:**
 - List of agents/sessions to spawn
-- Documented in `.vibe/agents.md`
+- Documented in `thoughts/{{BRANCH_NAME}}/agents.md`
 
 ---
 
@@ -69,11 +69,11 @@ Each phase has explicit outputs and requires human approval before proceeding.
 1. Spawn new session with `research_codebase` command
 2. Pass: user description + clarified summary
 3. Sub-agent researches codebase, writes findings
-4. Commit output to `.vibe/research.md`
+4. Commit output to `thoughts/{{BRANCH_NAME}}/research.md`
 5. Push branch, create draft PR
 
 **Outputs:**
-- `.vibe/research.md` committed
+- `thoughts/{{BRANCH_NAME}}/research.md` committed
 - Draft PR created
 - Send user GitHub link to research doc
 
@@ -85,13 +85,13 @@ Each phase has explicit outputs and requires human approval before proceeding.
 
 **Actions:**
 1. Spawn new session with `create_plan` command
-2. Pass: path to `.vibe/research.md`
+2. Pass: path to `thoughts/{{BRANCH_NAME}}/research.md`
 3. Sub-agent creates implementation plan
-4. Commit output to `.vibe/plan.md`
+4. Commit output to `thoughts/{{BRANCH_NAME}}/plan.md`
 5. Push branch
 
 **Outputs:**
-- `.vibe/plan.md` committed
+- `thoughts/{{BRANCH_NAME}}/plan.md` committed
 - Plan includes: approach, files to modify, open questions
 
 ---
@@ -106,7 +106,7 @@ Each phase has explicit outputs and requires human approval before proceeding.
 5. Commit and push
 
 **Outputs:**
-- Updated `.vibe/plan.md` with any new questions
+- Updated `thoughts/{{BRANCH_NAME}}/plan.md` with any new questions
 - Send user GitHub link to plan
 
 **Handoff:** User answers open questions.
@@ -123,7 +123,7 @@ Each phase has explicit outputs and requires human approval before proceeding.
 5. Continue until plan is complete (no open questions)
 
 **Outputs:**
-- Finalized `.vibe/plan.md`
+- Finalized `thoughts/{{BRANCH_NAME}}/plan.md`
 - User confirms: "Plan approved"
 
 ---
@@ -137,7 +137,7 @@ Each phase has explicit outputs and requires human approval before proceeding.
    bd create "{{TASK_TITLE}}" --prefix {{PROJECT_PREFIX}} --parent {{EPIC_ID}}
    ```
 3. Set up dependencies between beads
-4. Update `.vibe/epic.yaml` with child bead IDs
+4. Update `thoughts/{{BRANCH_NAME}}/epic.yaml` with child bead IDs
 
 **Outputs:**
 - Beads created for each task
@@ -167,7 +167,7 @@ Each phase has explicit outputs and requires human approval before proceeding.
 
 ## State Tracking
 
-### Epic YAML (`.vibe/epic.yaml`)
+### Epic YAML (`thoughts/{{BRANCH_NAME}}/epic.yaml`)
 
 ```yaml
 epic_id: llapp-a1b2
@@ -185,7 +185,7 @@ children:
 
 If a session ends mid-process:
 1. Check for in-progress epics: `bd list --status open --type epic`
-2. Read `.vibe/epic.yaml` for current phase
+2. Read `thoughts/{{BRANCH_NAME}}/epic.yaml` for current phase
 3. Ask user: "We have an in-progress feature for {{SUMMARY}}, currently in {{PHASE}} phase. Continue?"
 
 ---
@@ -204,7 +204,9 @@ These commands should exist in each project's `.claude/commands/`:
 
 ## Notes
 
-- All artifacts live in the worktree's `.vibe/` directory
+- All artifacts live in the worktree's `thoughts/{{BRANCH_NAME}}/` directory
+- This follows the established `thoughts/` pattern used for research docs
 - Beads are prefixed by project (e.g., `llapp-`, `sweeps-`)
 - Epic beads track the overall feature; child beads track individual tasks
 - Human approval required at: CLARIFY, RESEARCH, PLAN, FINAL REVIEW
+- `thoughts/` directories can be cleaned up over time

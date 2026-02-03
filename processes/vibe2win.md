@@ -12,6 +12,18 @@ Each phase has explicit outputs and requires human approval before proceeding.
 
 ---
 
+## Artifact Paths
+
+All artifacts follow the `thoughts/shared/` convention:
+
+| Type | Path Pattern |
+|------|--------------|
+| Research | `thoughts/shared/research/YYYY-MM-DD-{{BRANCH_NAME}}.md` |
+| Plans | `thoughts/shared/plans/YYYY-MM-DD-{{BRANCH_NAME}}.md` |
+| Handoffs | `thoughts/shared/handoffs/YYYY-MM-DD_HH-MM-SS-{{BRANCH_NAME}}.md` |
+
+---
+
 ## Phase 1: CLARIFY
 
 **Trigger:** User says `vibe2win: <description>`
@@ -36,17 +48,14 @@ Each phase has explicit outputs and requires human approval before proceeding.
    ```bash
    git worktree add ~/wt/{{PROJECT_NAME}}/{{BRANCH_NAME}}-wt -b feature/{{BRANCH_NAME}}
    ```
-2. Ensure `thoughts/` directory exists in worktree for artifacts
-3. Create epic bead:
+2. Create epic bead:
    ```bash
    bd create "[EPIC] {{FEATURE_SUMMARY}}" --prefix {{PROJECT_PREFIX}} -p 1 -t epic
    ```
-4. Save epic state to `thoughts/{{BRANCH_NAME}}/epic.yaml`
 
 **Outputs:**
 - Worktree at `~/wt/{{PROJECT_NAME}}/{{BRANCH_NAME}}-wt`
 - Epic bead created (e.g., `llapp-a1b2`)
-- `thoughts/{{BRANCH_NAME}}/epic.yaml` with bead ID and phase tracking
 
 ---
 
@@ -59,7 +68,6 @@ Each phase has explicit outputs and requires human approval before proceeding.
 
 **Outputs:**
 - List of agents/sessions to spawn
-- Documented in `thoughts/{{BRANCH_NAME}}/agents.md`
 
 ---
 
@@ -69,11 +77,11 @@ Each phase has explicit outputs and requires human approval before proceeding.
 1. Spawn new session with `research_codebase` command
 2. Pass: user description + clarified summary
 3. Sub-agent researches codebase, writes findings
-4. Commit output to `thoughts/{{BRANCH_NAME}}/research.md`
+4. Commit output to `thoughts/shared/research/YYYY-MM-DD-{{BRANCH_NAME}}.md`
 5. Push branch, create draft PR
 
 **Outputs:**
-- `thoughts/{{BRANCH_NAME}}/research.md` committed
+- Research doc committed
 - Draft PR created
 - Send user GitHub link to research doc
 
@@ -85,13 +93,13 @@ Each phase has explicit outputs and requires human approval before proceeding.
 
 **Actions:**
 1. Spawn new session with `create_plan` command
-2. Pass: path to `thoughts/{{BRANCH_NAME}}/research.md`
+2. Pass: path to research doc
 3. Sub-agent creates implementation plan
-4. Commit output to `thoughts/{{BRANCH_NAME}}/plan.md`
+4. Commit output to `thoughts/shared/plans/YYYY-MM-DD-{{BRANCH_NAME}}.md`
 5. Push branch
 
 **Outputs:**
-- `thoughts/{{BRANCH_NAME}}/plan.md` committed
+- Plan doc committed
 - Plan includes: approach, files to modify, open questions
 
 ---
@@ -106,7 +114,7 @@ Each phase has explicit outputs and requires human approval before proceeding.
 5. Commit and push
 
 **Outputs:**
-- Updated `thoughts/{{BRANCH_NAME}}/plan.md` with any new questions
+- Updated plan with any new questions
 - Send user GitHub link to plan
 
 **Handoff:** User answers open questions.
@@ -123,7 +131,7 @@ Each phase has explicit outputs and requires human approval before proceeding.
 5. Continue until plan is complete (no open questions)
 
 **Outputs:**
-- Finalized `thoughts/{{BRANCH_NAME}}/plan.md`
+- Finalized plan doc
 - User confirms: "Plan approved"
 
 ---
@@ -137,7 +145,6 @@ Each phase has explicit outputs and requires human approval before proceeding.
    bd create "{{TASK_TITLE}}" --prefix {{PROJECT_PREFIX}} --parent {{EPIC_ID}}
    ```
 3. Set up dependencies between beads
-4. Update `thoughts/{{BRANCH_NAME}}/epic.yaml` with child bead IDs
 
 **Outputs:**
 - Beads created for each task
@@ -165,48 +172,70 @@ Each phase has explicit outputs and requires human approval before proceeding.
 
 ---
 
-## State Tracking
+## Handoff Mechanism
 
-### Epic YAML (`thoughts/{{BRANCH_NAME}}/epic.yaml`)
+Long-running implementations often require context handoffs when:
+- Context exceeds 50%
+- Session needs to end but work is incomplete
+- Switching between major phases
 
-```yaml
-epic_id: llapp-a1b2
-branch: feature/delete-plannings
-project: llapp
-phase: plan  # clarify|environment|identify|research|plan|gap_check|review|tasks|implement|complete
-summary: "Allow users to delete planning meetings with confirmation"
-created: 2026-02-03T08:45:00Z
-children:
-  - llapp-c3d4
-  - llapp-e5f6
+### Creating a Handoff
+
+Use `/create_handoff` command to create a handoff document at:
+```
+thoughts/shared/handoffs/YYYY-MM-DD_HH-MM-SS-{{BRANCH_NAME}}.md
 ```
 
-### Session Resume
+The handoff captures:
+- Current task status
+- Recent changes
+- Key learnings
+- Artifacts produced
+- Next steps
 
-If a session ends mid-process:
+### Resuming from Handoff
+
+Use `/resume_handoff` command with either:
+- Full path: `/resume_handoff thoughts/shared/handoffs/2026-02-03_14-30-22-feature-name.md`
+- Branch name: `/resume_handoff know-show-format-v2` (finds most recent handoff for that branch)
+
+The resume process:
+1. Reads handoff completely
+2. Reads referenced research/plan docs
+3. Validates current state vs handoff state
+4. Proposes next actions
+5. Gets confirmation before proceeding
+
+---
+
+## Session Resume (Without Handoff)
+
+If a session ends mid-process without a handoff:
 1. Check for in-progress epics: `bd list --status open --type epic`
-2. Read `thoughts/{{BRANCH_NAME}}/epic.yaml` for current phase
-3. Ask user: "We have an in-progress feature for {{SUMMARY}}, currently in {{PHASE}} phase. Continue?"
+2. Look for recent research/plan docs in `thoughts/shared/`
+3. Ask user: "We have an in-progress feature for {{SUMMARY}}. Continue?"
 
 ---
 
 ## Commands Referenced
 
-These commands should exist in each project's `.claude/commands/`:
+These commands should exist in the project's `.claude/commands/`:
 
 | Command | Purpose |
 |---------|---------|
 | `research_codebase.md` | Investigate codebase for feature implementation |
 | `create_plan.md` | Generate implementation plan from research |
 | `implement_plan.md` | Execute a specific task from the plan |
+| `create_handoff.md` | Create handoff doc when context > 50% or switching |
+| `resume_handoff.md` | Resume work from a handoff document |
 
 ---
 
 ## Notes
 
-- All artifacts live in the worktree's `thoughts/{{BRANCH_NAME}}/` directory
-- This follows the established `thoughts/` pattern used for research docs
+- All artifacts live in `thoughts/shared/` with dated filenames
 - Beads are prefixed by project (e.g., `llapp-`, `sweeps-`)
 - Epic beads track the overall feature; child beads track individual tasks
 - Human approval required at: CLARIFY, RESEARCH, PLAN, FINAL REVIEW
 - `thoughts/` directories can be cleaned up over time
+- Create handoffs proactively to avoid losing context

@@ -14,6 +14,8 @@ Beads are the primary state tracking mechanism. Each phase has its own epic with
 CLARIFY → ENVIRONMENT → RESEARCH → PLAN → GAP CHECK → IMPLEMENT
 ```
 
+*(IDENTIFY is folded into PLAN and IMPLEMENT — determine needed agents during planning, spawn them during implementation)*
+
 Each phase:
 1. Has its own epic bead
 2. Has tasks under that epic
@@ -201,6 +203,7 @@ bd create "[PLAN] {{BRANCH_NAME}}" --prefix {{PROJECT_PREFIX}} -t epic
 - `Plan architecture` — High-level approach
 - `Plan implementation steps` — Ordered task list
 - `Plan tests` — What tests to write
+- `Identify agents needed` — What sub-agents for implementation?
 - `Identify open questions` — What's unclear?
 
 **Work Tasks:** Spawn sub-agents or work directly.
@@ -224,6 +227,10 @@ High-level description of the solution.
 ## Tests to Write
 - Test 1
 - Test 2
+
+## Agents Needed
+- Agent 1: Purpose (e.g., "implement model changes")
+- Agent 2: Purpose (e.g., "implement controller + views")
 
 ## Open Questions
 - [ ] Question 1

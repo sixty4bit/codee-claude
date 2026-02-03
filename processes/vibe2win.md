@@ -4,50 +4,22 @@
 
 **Write everything to a file (or bead) so any session can resume where you left off.**
 
-Beads are the primary state tracking mechanism. Each phase has its own epic with tasks underneath. Sub-agents work the tasks. When all tasks complete, write a summary .md (for humans), then create the next phase's epic and tasks.
+Each phase creates the next phase's epic and tasks. Commands handle the work and create beads for the following phase. At 55% context, create a handoff document.
 
 ---
 
 ## Overview
 
 ```
-CLARIFY → ENVIRONMENT → RESEARCH → PLAN → GAP CHECK → IMPLEMENT
+CLARIFY → ENVIRONMENT → RESEARCH → PLAN → IMPLEMENT
 ```
-
-*(IDENTIFY is folded into PLAN and IMPLEMENT — determine needed agents during planning, spawn them during implementation)*
 
 Each phase:
-1. Has its own epic bead
-2. Has tasks under that epic
-3. Tasks are worked by sub-agents
-4. All tasks must complete before moving to next phase
-5. Phase summary written to .md at completion
-
----
-
-## Phase Structure
-
-### Epic Naming Convention
-
-```
-[PHASE] {{BRANCH_NAME}}
-```
-
-Examples:
-- `[CLARIFY] delete-plannings`
-- `[RESEARCH] delete-plannings`
-- `[PLAN] delete-plannings`
-- `[IMPLEMENT] delete-plannings`
-
-### Task Flow
-
-1. Create phase epic
-2. Create tasks under epic for all work in this phase
-3. Spawn sub-agents to work tasks (or work them directly if simple)
-4. Wait for all tasks to complete
-5. Write phase summary .md
-6. Create next phase epic + tasks
-7. Proceed to next phase
+1. Reads the epic/tasks created by the previous phase
+2. Executes using the appropriate command
+3. Creates the next phase's epic/tasks
+4. Writes a summary .md for humans
+5. Hands off to user for approval
 
 ---
 
@@ -55,20 +27,15 @@ Examples:
 
 **Trigger:** User says `vibe2win: <description>`
 
-**Create Epic:**
-```bash
-bd create "[CLARIFY] {{BRANCH_NAME}}" --prefix {{PROJECT_PREFIX}} -t epic
-```
+**Actions:**
+1. Ask clarifying questions about requirements
+2. Identify edge cases and constraints
+3. Confirm project context (ask if ambiguous)
+4. Define `{{BRANCH_NAME}}` — kebab-case feature name
 
-**Create Tasks:**
-- `Understand requirements` — Parse user's request
-- `Identify edge cases` — What could go wrong?
-- `Clarify ambiguities` — Questions for user
-- `Define scope` — What's in/out
+**Outputs:**
+- `thoughts/shared/clarify/YYYY-MM-DD-{{BRANCH_NAME}}.md`
 
-**Work Tasks:** Ask user clarifying questions, document answers in task notes.
-
-**Phase Output:** `thoughts/shared/clarify/YYYY-MM-DD-{{BRANCH_NAME}}.md`
 ```markdown
 # Clarify: {{BRANCH_NAME}}
 
@@ -86,243 +53,144 @@ One paragraph description of the feature.
 ## Scope
 **In scope:** ...
 **Out of scope:** ...
-
-## Beads
-- Epic: {{EPIC_ID}}
-- Tasks: {{TASK_IDS}}
-
-## Next Phase
-Created [ENVIRONMENT] epic: {{NEXT_EPIC_ID}}
 ```
 
-**Handoff:** Wait for user approval before proceeding.
+**Create RESEARCH Phase:**
+```bash
+# Create RESEARCH epic
+bd create "[RESEARCH] {{BRANCH_NAME}}" --prefix {{PROJECT_PREFIX}} -t epic
+
+# Create single task: run research_codebase
+bd create "Run research_codebase with clarify doc" --prefix {{PROJECT_PREFIX}} --parent {{RESEARCH_EPIC_ID}}
+```
+
+**Handoff:** Wait for user approval of clarify doc before proceeding.
 
 ---
 
 ## Phase 2: ENVIRONMENT
 
-**Create Epic:**
-```bash
-bd create "[ENVIRONMENT] {{BRANCH_NAME}}" --prefix {{PROJECT_PREFIX}} -t epic
-```
+**Actions (no beads needed — just do it):**
+1. Create worktree and branch:
+   ```bash
+   git worktree add ~/wt/{{PROJECT_NAME}}/{{BRANCH_NAME}}-wt -b feature/{{BRANCH_NAME}}
+   ```
+2. Verify worktree exists
+3. Create draft PR and push to GitHub:
+   ```bash
+   cd ~/wt/{{PROJECT_NAME}}/{{BRANCH_NAME}}-wt
+   git commit --allow-empty -m "Start feature/{{BRANCH_NAME}}"
+   git push -u origin feature/{{BRANCH_NAME}}
+   gh pr create --draft --title "{{BRANCH_NAME}}" --body "WIP"
+   ```
 
-**Create Tasks:**
-- `Create worktree` — Set up isolated working directory
-- `Create feature branch` — Branch from main
-- `Verify setup` — Confirm environment works
+**Outputs:**
+- Worktree at `~/wt/{{PROJECT_NAME}}/{{BRANCH_NAME}}-wt`
+- Draft PR on GitHub
 
-**Work Tasks:**
-```bash
-git worktree add ~/wt/{{PROJECT_NAME}}/{{BRANCH_NAME}}-wt -b feature/{{BRANCH_NAME}}
-```
-
-**Phase Output:** `thoughts/shared/environment/YYYY-MM-DD-{{BRANCH_NAME}}.md`
-```markdown
-# Environment: {{BRANCH_NAME}}
-
-## Setup
-- Worktree: ~/wt/{{PROJECT_NAME}}/{{BRANCH_NAME}}-wt
-- Branch: feature/{{BRANCH_NAME}}
-
-## Beads
-- Epic: {{EPIC_ID}}
-- Tasks: {{TASK_IDS}}
-
-## Next Phase
-Created [RESEARCH] epic: {{NEXT_EPIC_ID}}
-Tasks created:
-- {{TASK_1}}: Research area 1
-- {{TASK_2}}: Research area 2
-```
+Proceed immediately to RESEARCH phase.
 
 ---
 
 ## Phase 3: RESEARCH
 
-**Create Epic:**
-```bash
-bd create "[RESEARCH] {{BRANCH_NAME}}" --prefix {{PROJECT_PREFIX}} -t epic
-```
+**Starts with:** RESEARCH epic/task created by CLARIFY phase
 
-**Create Tasks:** Based on what needs to be understood:
-- `Research existing implementation` — How does current code work?
-- `Research similar patterns` — How have we solved this before?
-- `Research dependencies` — What else touches this code?
-- `Research tests` — What test coverage exists?
+**Actions:**
+1. Read the RESEARCH epic and its task
+2. Run `research_codebase` command with:
+   - Path to clarify doc: `thoughts/shared/clarify/YYYY-MM-DD-{{BRANCH_NAME}}.md`
+   - RESEARCH epic ID
+3. The command handles:
+   - Investigating the codebase
+   - Writing research findings
+   - Creating the research doc
+   - Creating PLAN phase epic/tasks
 
-**Work Tasks:** Spawn sub-agents for each research task. Each agent:
-1. Investigates their area
-2. Updates task with findings
-3. Closes task when done
+**Outputs (created by research_codebase command):**
+- `thoughts/shared/research/YYYY-MM-DD-{{BRANCH_NAME}}.md`
+- `[PLAN] {{BRANCH_NAME}}` epic with tasks
 
-**Phase Output:** `thoughts/shared/research/YYYY-MM-DD-{{BRANCH_NAME}}.md`
-```markdown
-# Research: {{BRANCH_NAME}}
-
-## Findings
-
-### Existing Implementation
-(From bead {{TASK_1}})
-...findings...
-
-### Similar Patterns
-(From bead {{TASK_2}})
-...findings...
-
-### Dependencies
-(From bead {{TASK_3}})
-...findings...
-
-## Key Files
-- `path/to/file1.rb` — Description
-- `path/to/file2.rb` — Description
-
-## Beads
-- Epic: {{EPIC_ID}}
-- Tasks: {{TASK_IDS}}
-
-## Next Phase
-Created [PLAN] epic: {{NEXT_EPIC_ID}}
-Tasks created:
-- {{TASK_1}}: Plan component 1
-- {{TASK_2}}: Plan component 2
-```
-
-**Handoff:** Push branch, create draft PR, send user link to research doc.
+**Handoff:** Commit changes, push branch, send user link to research doc. Wait for approval or changes.
 
 ---
 
 ## Phase 4: PLAN
 
-**Create Epic:**
-```bash
-bd create "[PLAN] {{BRANCH_NAME}}" --prefix {{PROJECT_PREFIX}} -t epic
-```
+**Starts with:** PLAN epic/tasks created by RESEARCH phase
 
-**Create Tasks:** Based on research findings:
-- `Plan architecture` — High-level approach
-- `Plan implementation steps` — Ordered task list
-- `Plan tests` — What tests to write
-- `Identify agents needed` — What sub-agents for implementation?
-- `Identify open questions` — What's unclear?
+**Actions:**
+1. Read the PLAN epic and its tasks
+2. Run `create_plan` command with:
+   - PLAN epic ID
+   - Path to research doc
+3. The command handles:
+   - Creating tasks for itself to complete (using beads)
+   - Identifying which agents should be used for implementation
+   - Creating tasks for user to answer if there are questions (these must all be closed before moving forward)
+   - Cross-referencing against CLARIFY doc (via sub-agent) to ensure all requirements addressed
+   - Creating missing requirement tasks for user verification if needed
+   - Creating IMPLEMENT phase epic/tasks:
+     - One top-level `[IMPLEMENT] {{BRANCH_NAME}}` epic
+     - Child epics/tasks as needed for the implementation
+   - Writing the plan doc
 
-**Work Tasks:** Spawn sub-agents or work directly.
+**Outputs (created by create_plan command):**
+- `thoughts/shared/plans/YYYY-MM-DD-{{BRANCH_NAME}}.md`
+- `[IMPLEMENT] {{BRANCH_NAME}}` epic with child epics/tasks
 
-**Phase Output:** `thoughts/shared/plans/YYYY-MM-DD-{{BRANCH_NAME}}.md`
-```markdown
-# Plan: {{BRANCH_NAME}}
-
-## Approach
-High-level description of the solution.
-
-## Implementation Steps
-1. Step 1
-2. Step 2
-3. Step 3
-
-## Files to Modify
-- `path/to/file1.rb` — Changes needed
-- `path/to/file2.rb` — Changes needed
-
-## Tests to Write
-- Test 1
-- Test 2
-
-## Agents Needed
-- Agent 1: Purpose (e.g., "implement model changes")
-- Agent 2: Purpose (e.g., "implement controller + views")
-
-## Open Questions
-- [ ] Question 1
-- [ ] Question 2
-
-## Beads
-- Epic: {{EPIC_ID}}
-- Tasks: {{TASK_IDS}}
-
-## Next Phase
-Created [GAP_CHECK] epic: {{NEXT_EPIC_ID}}
-```
+**Handoff:** Commit changes, push branch, send user link to plan doc. Wait for approval or changes.
 
 ---
 
-## Phase 5: GAP CHECK
+## Phase 5: IMPLEMENT
 
-**Create Epic:**
-```bash
-bd create "[GAP_CHECK] {{BRANCH_NAME}}" --prefix {{PROJECT_PREFIX}} -t epic
-```
+**Starts with:** IMPLEMENT epic/tasks created by PLAN phase
 
-**Create Tasks:**
-- `Compare plan to requirements` — Does plan cover everything?
-- `Review open questions` — Get answers from user
-- `Validate approach` — Is this the right solution?
+**Actions:**
+1. Read the IMPLEMENT epic and its tasks
+2. Run `implement_plan` command with:
+   - IMPLEMENT epic ID
+3. The command uses **TDD** (tests before code):
+   ```bash
+   bd ready --prefix {{PROJECT_PREFIX}}  # Show tasks with no blockers
+   ```
+4. For each ready task:
+   - Spawn sub-agent with task details + plan context
+   - Sub-agent writes tests first
+   - Sub-agent implements code to pass tests
+   - Sub-agent commits
+   - Sub-agent closes task
+   - Check for newly-unblocked tasks
+   - Repeat until all tasks done
 
-**Work Tasks:** Compare original requirements (from CLARIFY) to plan. Identify gaps.
-
-**Loop:** If open questions exist:
-1. Ask user
-2. Update plan with answers
-3. Re-check for gaps
-4. Repeat until plan is complete
-
-**Phase Output:** Update `thoughts/shared/plans/YYYY-MM-DD-{{BRANCH_NAME}}.md` with:
-- Answered questions
-- Any plan modifications
-- Gap check sign-off
-
-**Handoff:** User confirms "Plan approved"
+**Outputs:**
+- `thoughts/shared/implement/YYYY-MM-DD-{{BRANCH_NAME}}.md`
+- Code implemented with tests
+- All beads closed
+- PR ready for final review
 
 ---
 
-## Phase 6: IMPLEMENT
+## Context Management
 
-**Create Epic:**
-```bash
-bd create "[IMPLEMENT] {{BRANCH_NAME}}" --prefix {{PROJECT_PREFIX}} -t epic
-```
+**At 55% context:**
+1. Run `create_handoff` command to create handoff doc
+2. Handoff saved to: `thoughts/shared/handoffs/YYYY-MM-DD_HH-MM-SS-{{BRANCH_NAME}}.md`
+3. In new session, run `resume_handoff` with handoff path
+4. Continue from where you left off
 
-**Create Tasks:** From the plan's implementation steps:
-- Each step becomes a task
-- Set dependencies between tasks (blocking relationships)
-- Estimate complexity
+---
 
-**Work Tasks:**
-```bash
-bd ready --prefix {{PROJECT_PREFIX}}  # Show tasks with no blockers
-```
+## Commands (Need Updates)
 
-For each ready task:
-1. Spawn sub-agent with task details + plan context
-2. Sub-agent implements, writes tests, commits
-3. Sub-agent closes task
-4. Check for newly-unblocked tasks
-5. Repeat until all tasks done
-
-**Phase Output:** `thoughts/shared/implement/YYYY-MM-DD-{{BRANCH_NAME}}.md`
-```markdown
-# Implementation: {{BRANCH_NAME}}
-
-## Completed Tasks
-- {{TASK_1}}: Description — commit abc123
-- {{TASK_2}}: Description — commit def456
-
-## Changes Made
-- `path/to/file1.rb` — What changed
-- `path/to/file2.rb` — What changed
-
-## Tests Added
-- `test/path/to/test1.rb` — What it tests
-- `test/path/to/test2.rb` — What it tests
-
-## Beads
-- Epic: {{EPIC_ID}}
-- Tasks: {{TASK_IDS}}
-
-## PR Ready
-Branch: feature/{{BRANCH_NAME}}
-All tests passing: ✓
-```
+| Command | Current State | Needed Updates |
+|---------|---------------|----------------|
+| `research_codebase.md` | Exists | Update to use beads, create PLAN epic/tasks |
+| `create_plan.md` | Exists | Update to use beads, create own tasks, create IMPLEMENT epic/tasks, cross-reference CLARIFY |
+| `implement_plan.md` | Exists | Update to use TDD, read IMPLEMENT epic |
+| `create_handoff.md` | Exists (as hl_create_handoff.md) | Rename back or create new |
+| `resume_handoff.md` | Exists (as hl_resume_handoff.md) | Rename back or create new |
 
 ---
 
@@ -360,19 +228,25 @@ bd show {{TASK_ID}}
 
 When starting a new session:
 
-1. **Check for open epics:**
+1. **Check for handoffs:**
+   ```bash
+   ls thoughts/shared/handoffs/*-{{BRANCH_NAME}}.md
+   ```
+   If exists, run `resume_handoff` with most recent.
+
+2. **Check for open epics:**
    ```bash
    bd list --prefix {{PROJECT_PREFIX}} --status open --type epic
    ```
 
-2. **Find current phase:** Look for the most recent open phase epic
+3. **Find current phase:** Most recent open phase epic
 
-3. **Check task status:**
+4. **Check task status:**
    ```bash
    bd list --parent {{EPIC_ID}} --status open
    ```
 
-4. **Resume:** Work remaining open tasks, then proceed with phase completion
+5. **Resume:** Work remaining open tasks
 
 ---
 
@@ -381,7 +255,6 @@ When starting a new session:
 | Phase | Path |
 |-------|------|
 | Clarify | `thoughts/shared/clarify/YYYY-MM-DD-{{BRANCH_NAME}}.md` |
-| Environment | `thoughts/shared/environment/YYYY-MM-DD-{{BRANCH_NAME}}.md` |
 | Research | `thoughts/shared/research/YYYY-MM-DD-{{BRANCH_NAME}}.md` |
 | Plan | `thoughts/shared/plans/YYYY-MM-DD-{{BRANCH_NAME}}.md` |
 | Implement | `thoughts/shared/implement/YYYY-MM-DD-{{BRANCH_NAME}}.md` |
@@ -389,21 +262,11 @@ When starting a new session:
 
 ---
 
-## Legacy Commands
-
-HumanLayer-style handoff commands (renamed with `hl_` prefix):
-- `hl_create_handoff.md` — Create context handoff document
-- `hl_resume_handoff.md` — Resume from handoff document
-
-Use these if beads aren't available or for quick context transfers.
-
----
-
 ## Notes
 
 - **Beads are source of truth** — .md files are human-readable summaries
-- **Every task has an owner** — Either you or a sub-agent
-- **Phase epics track progress** — Easy to see where you are
-- **Tasks contain findings** — Use `bd update` to store research/learnings
-- **Dependencies prevent mistakes** — Block tasks that depend on others
-- **Files for archaeology** — Future humans can understand what/why
+- **Each phase creates the next phase's beads** — Chain of responsibility
+- **Commands do the heavy lifting** — research_codebase, create_plan, implement_plan
+- **TDD in IMPLEMENT** — Tests before code, always
+- **55% context threshold** — Create handoff before context overflow
+- **User approval gates** — CLARIFY, RESEARCH, PLAN require approval before proceeding

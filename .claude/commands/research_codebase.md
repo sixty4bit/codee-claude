@@ -1,191 +1,190 @@
 ---
-description: Document codebase as-is with thoughts directory for historical context
+description: Research codebase and create PLAN phase beads
 model: opus
 ---
 
 # Research Codebase
 
-You are tasked with conducting comprehensive research across the codebase to answer user questions by spawning parallel sub-agents and synthesizing their findings.
+You are tasked with researching the codebase to understand how to implement a feature. You will create a research document and set up the PLAN phase beads.
 
-## CRITICAL: YOUR ONLY JOB IS TO DOCUMENT AND EXPLAIN THE CODEBASE AS IT EXISTS TODAY
-- DO NOT suggest improvements or changes unless the user explicitly asks for them
-- DO NOT perform root cause analysis unless the user explicitly asks for them
-- DO NOT propose future enhancements unless the user explicitly asks for them
-- DO NOT critique the implementation or identify problems
-- DO NOT recommend refactoring, optimization, or architectural changes
-- ONLY describe what exists, where it exists, how it works, and how components interact
-- You are creating a technical map/documentation of the existing system
+## Inputs
 
-## Initial Setup:
+This command expects:
+1. **Clarify doc path**: `thoughts/shared/clarify/YYYY-MM-DD-{{BRANCH_NAME}}.md`
+2. **RESEARCH epic ID**: The epic created by CLARIFY phase (e.g., `llapp-a1b2`)
+3. **Project prefix**: For beads (e.g., `llapp`)
 
-When this command is invoked, respond with:
+## Process
+
+### Step 1: Read Context
+
+1. Read the clarify doc FULLY (no limit/offset)
+2. Read the RESEARCH epic: `bd show {{RESEARCH_EPIC_ID}}`
+3. Extract:
+   - Feature summary
+   - Requirements
+   - Edge cases
+   - Scope
+   - Branch name
+
+### Step 2: Create Research Tasks (Beads)
+
+Create tasks under the RESEARCH epic for each area to investigate:
+
+```bash
+# Create research tasks
+bd create "Understand existing implementation" --prefix {{PREFIX}} --parent {{RESEARCH_EPIC_ID}}
+bd create "Find similar patterns in codebase" --prefix {{PREFIX}} --parent {{RESEARCH_EPIC_ID}}
+bd create "Identify files to modify" --prefix {{PREFIX}} --parent {{RESEARCH_EPIC_ID}}
+bd create "Check test coverage" --prefix {{PREFIX}} --parent {{RESEARCH_EPIC_ID}}
 ```
-I'm ready to research the codebase. Please provide your research question or area of interest, and I'll analyze it thoroughly by exploring relevant components and connections.
+
+### Step 3: Execute Research
+
+For each research task:
+
+1. **Spawn sub-agent** to investigate that area
+2. **Sub-agent researches** using read-only tools
+3. **Sub-agent updates bead** with findings: `bd update {{TASK_ID}} --note "Findings..."`
+4. **Sub-agent closes bead**: `bd close {{TASK_ID}}`
+
+**CRITICAL**: You are documenting what EXISTS, not what SHOULD BE. No recommendations or critiques.
+
+Research areas:
+- **Existing implementation**: How does current code work?
+- **Similar patterns**: How have we solved this before?
+- **Files to modify**: What files will need changes?
+- **Test coverage**: What tests exist?
+
+### Step 4: Synthesize Findings
+
+After all research tasks complete:
+
+1. Gather findings from all beads: `bd show {{TASK_ID}}` for each
+2. Identify:
+   - Key files and their purposes
+   - Patterns to follow
+   - Integration points
+   - Potential challenges
+
+### Step 5: Create PLAN Epic and Tasks
+
+```bash
+# Create PLAN epic
+bd create "[PLAN] {{BRANCH_NAME}}" --prefix {{PREFIX}} -t epic
+
+# Create initial PLAN tasks based on research findings
+bd create "Define implementation approach" --prefix {{PREFIX}} --parent {{PLAN_EPIC_ID}}
+bd create "Identify agents for implementation" --prefix {{PREFIX}} --parent {{PLAN_EPIC_ID}}
+bd create "Cross-reference requirements" --prefix {{PREFIX}} --parent {{PLAN_EPIC_ID}}
+bd create "Create implementation tasks" --prefix {{PREFIX}} --parent {{PLAN_EPIC_ID}}
 ```
 
-Then wait for the user's research query.
+### Step 6: Write Research Document
 
-## Steps to follow after receiving the research query:
+Gather metadata:
+```bash
+git rev-parse HEAD
+git branch --show-current
+basename $(git rev-parse --show-toplevel)
+date +%Y-%m-%d
+```
 
-1. **Read any directly mentioned files first:**
-   - If the user mentions specific files (tickets, docs, JSON), read them FULLY first
-   - **IMPORTANT**: Use the Read tool WITHOUT limit/offset parameters to read entire files
-   - **CRITICAL**: Read these files yourself in the main context before spawning any sub-tasks
-   - This ensures you have full context before decomposing the research
+Write to: `thoughts/shared/research/YYYY-MM-DD-{{BRANCH_NAME}}.md`
 
-2. **Analyze and decompose the research question:**
-   - Break down the user's query into composable research areas
-   - Take time to ultrathink about the underlying patterns, connections, and architectural implications the user might be seeking
-   - Identify specific components, patterns, or concepts to investigate
-   - Create a research plan using TodoWrite to track all subtasks
-   - Consider which directories, files, or architectural patterns are relevant
+```markdown
+---
+date: [ISO timestamp]
+git_commit: [commit hash]
+branch: feature/{{BRANCH_NAME}}
+repository: [repo name]
+topic: "{{BRANCH_NAME}} Research"
+tags: [research, {{relevant tags}}]
+status: complete
+---
 
-3. **Spawn parallel sub-agent tasks for comprehensive research:**
-   - Create multiple Task agents to research different aspects concurrently
-   - We now have specialized agents that know how to do specific research tasks:
+# Research: {{BRANCH_NAME}}
 
-   **For codebase research:**
-   - Use the **codebase-locator** agent to find WHERE files and components live
-   - Use the **codebase-analyzer** agent to understand HOW specific code works (without critiquing it)
-   - Use the **codebase-pattern-finder** agent to find examples of existing patterns (without evaluating them)
+## Research Question
+[From clarify doc - what are we building?]
 
-   **IMPORTANT**: All agents are documentarians, not critics. They will describe what exists without suggesting improvements or identifying issues.
+## Summary
+[High-level findings]
 
-   **For web research (only if user explicitly asks):**
-   - Use the **web-search-researcher** agent for external documentation and resources
-   - IF you use web-research agents, instruct them to return LINKS with their findings, and please INCLUDE those links in your final report
+## Detailed Findings
 
-   The key is to use these agents intelligently:
-   - Start with locator agents to find what exists
-   - Then use analyzer agents on the most promising findings to document how they work
-   - Run multiple agents in parallel when they're searching for different things
-   - Each agent knows its job - just tell it what you're looking for
-   - Don't write detailed prompts about HOW to search - the agents already know
-   - Remind agents they are documenting, not evaluating or improving
+### Existing Implementation
+(From bead {{TASK_ID}})
+[What exists now, file:line references]
 
-4. **Wait for all sub-agents to complete and synthesize findings:**
-   - IMPORTANT: Wait for ALL sub-agent tasks to complete before proceeding
-   - Compile all sub-agent results (both codebase and thoughts findings)
-   - Prioritize live codebase findings as primary source of truth
-   - Use thoughts/ findings as supplementary historical context
-   - Connect findings across different components
-   - Include specific file paths and line numbers for reference
-   - Highlight patterns, connections, and architectural decisions
-   - Answer the user's specific questions with concrete evidence
+### Similar Patterns
+(From bead {{TASK_ID}})
+[Patterns to follow, examples found]
 
-5. **Gather metadata for the research document:**
-   - Gather git info: `git rev-parse HEAD`, `git branch --show-current`, basename of repo
-   - Filename: `thoughts/shared/research/YYYY-MM-DD-description.md`
-     - Format: `YYYY-MM-DD-description.md` where:
-       - YYYY-MM-DD is today's date
-       - description is a brief kebab-case description of the research topic
-     - Example: `2025-01-08-authentication-flow.md`
+### Files to Modify
+(From bead {{TASK_ID}})
+- `path/to/file.rb` — What changes needed
+- `path/to/other.rb` — What changes needed
 
-6. **Generate research document:**
-   - Use the metadata gathered in step 5
-   - Structure the document with YAML frontmatter followed by content:
-     ```markdown
-     ---
-     date: [Current date and time with timezone in ISO format]
-     researcher: [Researcher name]
-     git_commit: [Current commit hash]
-     branch: [Current branch name]
-     repository: [Repository name]
-     topic: "[User's Question/Topic]"
-     tags: [research, codebase, relevant-component-names]
-     status: complete
-     last_updated: [Current date in YYYY-MM-DD format]
-     last_updated_by: [Researcher name]
-     ---
+### Test Coverage
+(From bead {{TASK_ID}})
+[Existing tests, gaps identified]
 
-     # Research: [User's Question/Topic]
+## Key Discoveries
+- [Important finding 1]
+- [Important finding 2]
 
-     **Date**: [Current date and time with timezone]
-     **Researcher**: [Researcher name]
-     **Git Commit**: [Current commit hash]
-     **Branch**: [Current branch name]
-     **Repository**: [Repository name]
+## Beads
+- RESEARCH Epic: {{RESEARCH_EPIC_ID}}
+- Research Tasks: {{TASK_IDS}}
+- PLAN Epic: {{PLAN_EPIC_ID}} (created for next phase)
+- PLAN Tasks: {{PLAN_TASK_IDS}}
 
-     ## Research Question
-     [Original user query]
+## Next Phase
+PLAN phase ready with epic {{PLAN_EPIC_ID}}
+```
 
-     ## Summary
-     [High-level documentation of what was found, answering the user's question by describing what exists]
+### Step 7: Close RESEARCH Epic
 
-     ## Detailed Findings
+```bash
+bd close {{RESEARCH_EPIC_ID}}
+```
 
-     ### [Component/Area 1]
-     - Description of what exists ([file.ext:line](link))
-     - How it connects to other components
-     - Current implementation details (without evaluation)
+### Step 8: Handoff
 
-     ### [Component/Area 2]
-     ...
+1. Commit changes: `git add -A && git commit -m "Research: {{BRANCH_NAME}}"`
+2. Push branch: `git push`
+3. Present to user:
 
-     ## Code References
-     - `path/to/file.py:123` - Description of what's there
-     - `another/file.ts:45-67` - Description of the code block
+```
+Research complete! 
 
-     ## Architecture Documentation
-     [Current patterns, conventions, and design implementations found in the codebase]
+📄 Research doc: thoughts/shared/research/YYYY-MM-DD-{{BRANCH_NAME}}.md
 
-     ## Historical Context (from thoughts/)
-     [Relevant insights from thoughts/ directory with references]
-     - `thoughts/shared/something.md` - Historical decision about X
-     - `thoughts/local/notes.md` - Past exploration of Y
+Key findings:
+- [Summary point 1]
+- [Summary point 2]
+- [Summary point 3]
 
-     ## Related Research
-     [Links to other research documents in thoughts/shared/research/]
+🎯 PLAN phase ready:
+- Epic: {{PLAN_EPIC_ID}}
+- Tasks: [list task titles]
 
-     ## Open Questions
-     [Any areas that need further investigation]
-     ```
+Please review the research doc and let me know:
+- Any corrections needed?
+- Ready to proceed to PLAN phase?
+```
 
-7. **Add GitHub permalinks (if applicable):**
-   - Check if on main branch or if commit is pushed: `git branch --show-current` and `git status`
-   - If on main/master or pushed, generate GitHub permalinks:
-     - Get repo info: `gh repo view --json owner,name`
-     - Create permalinks: `https://github.com/{owner}/{repo}/blob/{commit}/{file}#L{line}`
-   - Replace local file references with permalinks in the document
+Wait for user approval before proceeding.
 
-8. **Present findings:**
-   - Present a concise summary of findings to the user
-   - Include key file references for easy navigation
-   - Ask if they have follow-up questions or need clarification
+## Context Management
 
-9. **Handle follow-up questions:**
-   - If the user has follow-up questions, append to the same research document
-   - Update the frontmatter fields `last_updated` and `last_updated_by` to reflect the update
-   - Add `last_updated_note: "Added follow-up research for [brief description]"` to frontmatter
-   - Add a new section: `## Follow-up Research [timestamp]`
-   - Spawn new sub-agents as needed for additional investigation
-   - Continue updating the document
+**At 55% context**: Run `create_handoff` command, then `resume_handoff` in new session.
 
-## Important notes:
-- Always use parallel Task agents to maximize efficiency and minimize context usage
-- Always run fresh codebase research - never rely solely on existing research documents
-- The thoughts/ directory provides historical context to supplement live findings
-- Focus on finding concrete file paths and line numbers for developer reference
-- Research documents should be self-contained with all necessary context
-- Each sub-agent prompt should be specific and focused on read-only documentation operations
-- Document cross-component connections and how systems interact
-- Include temporal context (when the research was conducted)
-- Link to GitHub when possible for permanent references
-- Keep the main agent focused on synthesis, not deep file reading
-- Have sub-agents document examples and usage patterns as they exist
-- Explore all of thoughts/ directory, not just research subdirectory
-- **CRITICAL**: You and all sub-agents are documentarians, not evaluators
-- **REMEMBER**: Document what IS, not what SHOULD BE
-- **NO RECOMMENDATIONS**: Only describe the current state of the codebase
-- **File reading**: Always read mentioned files FULLY (no limit/offset) before spawning sub-tasks
-- **Critical ordering**: Follow the numbered steps exactly
-  - ALWAYS read mentioned files first before spawning sub-tasks (step 1)
-  - ALWAYS wait for all sub-agents to complete before synthesizing (step 4)
-  - ALWAYS gather metadata before writing the document (step 5 before step 6)
-  - NEVER write the research document with placeholder values
-- **Frontmatter consistency**:
-  - Always include frontmatter at the beginning of research documents
-  - Keep frontmatter fields consistent across all research documents
-  - Update frontmatter when adding follow-up research
-  - Use snake_case for multi-word field names (e.g., `last_updated`, `git_commit`)
-  - Tags should be relevant to the research topic and components studied
+## Important Notes
+
+- **Document what IS, not what SHOULD BE** — No recommendations
+- **Use beads for all tasks** — Creates audit trail
+- **Close beads when done** — Keeps state clean
+- **Create next phase beads** — Chain of responsibility
+- **Commit frequently** — Preserve progress

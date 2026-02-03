@@ -1,89 +1,291 @@
 ---
-description: Implement technical plans from thoughts/shared/plans with verification
+description: Implement plan using TDD with beads task tracking
+model: opus
 ---
 
 # Implement Plan
 
-You are tasked with implementing an approved technical plan from `thoughts/shared/plans/`. These plans contain phases with specific changes and success criteria.
+You are tasked with implementing an approved plan using Test-Driven Development (TDD). You will work through beads tasks, spawning sub-agents for each, writing tests before code.
 
-## Getting Started
+## Inputs
 
-When given a plan path:
-- Read the plan completely and check for any existing checkmarks (- [x])
-- Read the original ticket and all files mentioned in the plan
-- **Read files fully** - never use limit/offset parameters, you need complete context
-- Think deeply about how the pieces fit together
-- Create a todo list to track your progress
-- Start implementing if you understand what needs to be done
+This command expects:
+1. **IMPLEMENT epic ID**: The epic created by PLAN phase (e.g., `llapp-c3d4`)
+2. **Plan doc path**: `thoughts/shared/plans/YYYY-MM-DD-{{BRANCH_NAME}}.md`
+3. **Project prefix**: For beads (e.g., `llapp`)
 
-If no plan path provided, ask for one.
+## Core Principle: TDD
 
-## Implementation Philosophy
+**Tests are written BEFORE code. Always.**
 
-Plans are carefully designed, but reality can be messy. Your job is to:
-- Follow the plan's intent while adapting to what you find
-- Implement each phase fully before moving to the next
-- Verify your work makes sense in the broader codebase context
-- Update checkboxes in the plan as you complete sections
+For every implementation task:
+1. Write failing test that defines expected behavior
+2. Run test, confirm it fails
+3. Write minimal code to make test pass
+4. Run test, confirm it passes
+5. Refactor if needed
+6. Commit
 
-When things don't match the plan exactly, think about why and communicate clearly. The plan is your guide, but your judgment matters too.
+## Process
 
-If you encounter a mismatch:
-- STOP and think deeply about why the plan can't be followed
-- Present the issue clearly:
-  ```
-  Issue in Phase [N]:
-  Expected: [what the plan says]
-  Found: [actual situation]
-  Why this matters: [explanation]
+### Step 1: Read Context
 
-  How should I proceed?
-  ```
+1. Read the IMPLEMENT epic: `bd show {{IMPLEMENT_EPIC_ID}}`
+2. List all tasks: `bd list --parent {{IMPLEMENT_EPIC_ID}} --recursive`
+3. Read the plan doc FULLY
+4. Understand:
+   - Implementation phases
+   - Task dependencies
+   - Success criteria
+   - Agent assignments
 
-## Framework-Specific Guidance
+### Step 2: Find Ready Tasks
 
-**For Ruby on Rails projects**: Use the 37signals agents (api-agent, model-agent, test-agent, migration-agent, etc.) for implementation work. These agents understand Rails conventions and 37signals patterns deeply.
+```bash
+bd ready --prefix {{PREFIX}}
+```
 
-**For other projects**: Follow your project's established patterns and conventions. Run your project's test suite after each phase.
+This shows tasks with no blockers (dependencies satisfied).
 
-## Verification Approach
+### Step 3: Work Each Ready Task
 
-After implementing a phase:
-- Run your project's test suite and any relevant checks
-- Fix any issues before proceeding
-- Update your progress in both the plan and your todos
-- Check off completed items in the plan file itself using Edit
-- **Pause for human verification**: After completing all automated verification for a phase, pause and inform the human that the phase is ready for manual testing. Use this format:
-  ```
-  Phase [N] Complete - Ready for Manual Verification
+For each ready task:
 
-  Automated verification passed:
-  - [List automated checks that passed]
+#### 3a. Read Task Details
 
-  Please perform the manual verification steps listed in the plan:
-  - [List manual verification items from the plan]
+```bash
+bd show {{TASK_ID}}
+```
 
-  Let me know when manual testing is complete so I can proceed to Phase [N+1].
-  ```
+Understand:
+- What needs to be implemented
+- Which files to modify
+- Success criteria from plan
 
-If instructed to execute multiple phases consecutively, skip the pause until the last phase. Otherwise, assume you are just doing one phase.
+#### 3b. Spawn Sub-Agent
 
-Do not check off items in the manual testing steps until confirmed by the user.
+Spawn a sub-agent with:
 
-## If You Get Stuck
+```
+## Task
+{{TASK_TITLE}}
 
-When something isn't working as expected:
-- First, make sure you've read and understood all the relevant code
-- Consider if the codebase has evolved since the plan was written
-- Present the mismatch clearly and ask for guidance
+## Context
+Plan: {{PLAN_PATH}}
+Task ID: {{TASK_ID}}
+Branch: feature/{{BRANCH_NAME}}
 
-Use sub-tasks sparingly - mainly for targeted debugging or exploring unfamiliar territory.
+## Working Directory
+{{WORKTREE_PATH}}
 
-## Resuming Work
+## Instructions
 
-If the plan has existing checkmarks:
-- Trust that completed work is done
-- Pick up from the first unchecked item
-- Verify previous work only if something seems off
+You MUST use TDD (Test-Driven Development):
 
-Remember: You're implementing a solution, not just checking boxes. Keep the end goal in mind and maintain forward momentum.
+1. **Write Test First**
+   - Create/update test file
+   - Write test that defines expected behavior
+   - Test MUST fail initially (red)
+
+2. **Run Test**
+   ```bash
+   # Rails example
+   bundle exec rails test test/path/to/test.rb
+   ```
+   - Confirm test fails with expected error
+   - If test passes, your test is wrong
+
+3. **Write Implementation**
+   - Write minimal code to make test pass
+   - No more than needed
+
+4. **Run Test Again**
+   - Confirm test passes (green)
+   - If still failing, fix implementation
+
+5. **Refactor (if needed)**
+   - Clean up code
+   - Run tests again to confirm still passing
+
+6. **Commit**
+   ```bash
+   git add -A
+   git commit -m "{{TASK_TITLE}}"
+   ```
+
+7. **Close Bead**
+   ```bash
+   bd update {{TASK_ID}} --note "Implemented with TDD. Commit: $(git rev-parse --short HEAD)"
+   bd close {{TASK_ID}}
+   ```
+
+## Success Criteria
+[From plan for this task]
+
+## Files to Modify
+[From plan]
+
+## DO NOT
+- Write code before tests
+- Skip the failing test step
+- Commit without tests passing
+```
+
+#### 3c. Wait for Sub-Agent
+
+Wait for sub-agent to complete. Verify:
+- Task bead is closed
+- Commit was made
+- Tests are passing
+
+#### 3d. Check for Newly-Unblocked Tasks
+
+```bash
+bd ready --prefix {{PREFIX}}
+```
+
+Tasks that were blocked on the completed task are now ready.
+
+### Step 4: Repeat Until Done
+
+Continue working ready tasks until all tasks are closed:
+
+```bash
+bd list --parent {{IMPLEMENT_EPIC_ID}} --status open --recursive
+```
+
+When this returns empty, implementation is complete.
+
+### Step 5: Final Verification
+
+Run full test suite:
+```bash
+# Rails
+bundle exec rails test
+
+# Run linter
+bundle exec rubocop
+```
+
+All must pass.
+
+### Step 6: Write Implementation Summary
+
+Write to: `thoughts/shared/implement/YYYY-MM-DD-{{BRANCH_NAME}}.md`
+
+```markdown
+---
+date: [ISO timestamp]
+git_commit: [current commit hash]
+branch: feature/{{BRANCH_NAME}}
+repository: [repo name]
+topic: "{{BRANCH_NAME}} Implementation"
+status: complete
+---
+
+# Implementation: {{BRANCH_NAME}}
+
+## Summary
+[Brief description of what was implemented]
+
+## Completed Tasks
+
+### Phase 1: [Name]
+- {{TASK_1}}: [description] — commit {{HASH}}
+- {{TASK_2}}: [description] — commit {{HASH}}
+
+### Phase 2: [Name]
+...
+
+## Changes Made
+- `path/to/file1.rb` — [what changed]
+- `path/to/file2.rb` — [what changed]
+
+## Tests Added
+- `test/path/to/test1.rb` — [what it tests]
+- `test/path/to/test2.rb` — [what it tests]
+
+## Verification
+- [ ] All unit tests pass
+- [ ] All integration tests pass
+- [ ] Linter passes
+- [ ] Manual testing checklist (for user)
+
+## Beads
+- IMPLEMENT Epic: {{IMPLEMENT_EPIC_ID}}
+- Total tasks completed: {{COUNT}}
+- All tasks: {{TASK_IDS_WITH_COMMITS}}
+
+## PR Ready
+Branch: feature/{{BRANCH_NAME}}
+Tests passing: ✓
+```
+
+### Step 7: Close IMPLEMENT Epic
+
+```bash
+bd close {{IMPLEMENT_EPIC_ID}}
+```
+
+### Step 8: Handoff
+
+1. Commit summary: `git add -A && git commit -m "Implementation complete: {{BRANCH_NAME}}"`
+2. Push branch: `git push`
+3. Update PR description
+4. Present to user:
+
+```
+Implementation complete! 🎉
+
+📄 Summary: thoughts/shared/implement/YYYY-MM-DD-{{BRANCH_NAME}}.md
+
+Completed:
+- {{TASK_COUNT}} tasks implemented
+- {{TEST_COUNT}} tests added
+- All tests passing ✓
+- Linter passing ✓
+
+Manual verification needed:
+- [ ] [Manual test 1 from plan]
+- [ ] [Manual test 2 from plan]
+
+PR ready for review: {{PR_URL}}
+```
+
+## Context Management
+
+**At 55% context**: 
+1. Note which tasks are complete and which are remaining
+2. Run `create_handoff` command
+3. In new session, run `resume_handoff`
+4. Check `bd ready` to continue
+
+## Error Handling
+
+### Test Won't Pass
+1. Check if test is correct
+2. Check if implementation matches plan
+3. If plan is wrong, create user task:
+   ```bash
+   bd create "[USER] Plan issue: {{DESCRIPTION}}" --prefix {{PREFIX}} --parent {{IMPLEMENT_EPIC_ID}}
+   ```
+4. Wait for user input
+
+### Blocked Task Won't Unblock
+1. Check dependencies: `bd show {{TASK_ID}}`
+2. Verify blocker is actually closed
+3. If dependency issue, fix with `bd unblock`
+
+### Sub-Agent Fails
+1. Check sub-agent output
+2. If code issue, spawn new sub-agent with more context
+3. If fundamental problem, escalate to user
+
+## Important Notes
+
+- **TDD is mandatory** — Tests before code, always
+- **One task at a time** — Complete before starting next
+- **Commit per task** — Atomic, reviewable commits
+- **Close beads** — Keeps state accurate
+- **Check ready tasks** — Dependencies auto-unblock
+- **Full test suite at end** — Catch any regressions

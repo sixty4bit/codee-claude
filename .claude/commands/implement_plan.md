@@ -5,14 +5,14 @@ model: opus
 
 # Implement Plan
 
-You are tasked with implementing an approved plan using Test-Driven Development (TDD). You will work through beads tasks, spawning sub-agents for each, writing tests before code.
+You are tasked with implementing an approved plan using Test-Driven Development (TDD). Each task is tracked as a bead. Tests are written BEFORE code.
 
 ## Inputs
 
 This command expects:
-1. **IMPLEMENT epic ID**: The epic created by PLAN phase (e.g., `llapp-c3d4`)
+1. **IMPLEMENT epic ID**: Epic from PLAN phase (e.g., `llapp-c3d4`)
 2. **Plan doc path**: `thoughts/shared/plans/YYYY-MM-DD-{{BRANCH_NAME}}.md`
-3. **Project prefix**: For beads (e.g., `llapp`)
+3. **Project prefix**: For beads (e.g., `llapp`, `codee`)
 
 ## Core Principle: TDD
 
@@ -20,26 +20,49 @@ This command expects:
 
 For every implementation task:
 1. Write failing test that defines expected behavior
-2. Run test, confirm it fails
+2. Run test, confirm it fails (RED)
 3. Write minimal code to make test pass
-4. Run test, confirm it passes
+4. Run test, confirm it passes (GREEN)
 5. Refactor if needed
 6. Commit
 
-## Process
+## Process Overview
 
-### Step 1: Read Context
+The IMPLEMENT epic should already have child epics and tasks from the PLAN phase. Your job is to work through them using TDD.
 
-1. Read the IMPLEMENT epic: `bd show {{IMPLEMENT_EPIC_ID}}`
-2. List all tasks: `bd list --parent {{IMPLEMENT_EPIC_ID}} --recursive`
-3. Read the plan doc FULLY
+## Step 1: Read Context
+
+1. Read the IMPLEMENT epic:
+   ```bash
+   bd show {{IMPLEMENT_EPIC_ID}}
+   ```
+
+2. List all tasks recursively:
+   ```bash
+   bd list --parent {{IMPLEMENT_EPIC_ID}} --recursive
+   ```
+
+3. Read the plan doc FULLY (no limit/offset)
+
 4. Understand:
    - Implementation phases
    - Task dependencies
    - Success criteria
    - Agent assignments
 
-### Step 2: Find Ready Tasks
+## Step 2: Create Progress Tracking Beads
+
+Create meta-tasks to track overall progress:
+
+```bash
+bd create "Step 1: Setup and context" --prefix {{PREFIX}} --parent {{IMPLEMENT_EPIC_ID}}
+bd create "Step 2: TDD implementation loop" --prefix {{PREFIX}} --parent {{IMPLEMENT_EPIC_ID}}
+bd create "Step 3: Final verification" --prefix {{PREFIX}} --parent {{IMPLEMENT_EPIC_ID}}
+bd create "Step 4: Write summary" --prefix {{PREFIX}} --parent {{IMPLEMENT_EPIC_ID}}
+bd create "Step 5: Handoff" --prefix {{PREFIX}} --parent {{IMPLEMENT_EPIC_ID}}
+```
+
+## Step 3: Find Ready Tasks
 
 ```bash
 bd ready --prefix {{PREFIX}}
@@ -47,11 +70,18 @@ bd ready --prefix {{PREFIX}}
 
 This shows tasks with no blockers (dependencies satisfied).
 
-### Step 3: Work Each Ready Task
+If `bd ready` doesn't work with prefix, use:
+```bash
+bd list --parent {{IMPLEMENT_EPIC_ID}} --status open | head -20
+```
 
-For each ready task:
+## Step 4: TDD Implementation Loop (Main Work)
 
-#### 3a. Read Task Details
+**Update bead**: `bd update {{STEP_2_ID}} --note "Starting TDD loop..."`
+
+For each ready implementation task:
+
+### 4a. Read Task Details
 
 ```bash
 bd show {{TASK_ID}}
@@ -62,62 +92,68 @@ Understand:
 - Which files to modify
 - Success criteria from plan
 
-#### 3b. Spawn Sub-Agent
+### 4b. Spawn TDD Sub-Agent
 
-Spawn a sub-agent with:
+Spawn a sub-agent for each task:
 
 ```
 ## Task
-{{TASK_TITLE}}
+{{TASK_TITLE}} (Bead: {{TASK_ID}})
 
 ## Context
-Plan: {{PLAN_PATH}}
-Task ID: {{TASK_ID}}
-Branch: feature/{{BRANCH_NAME}}
+- Plan: {{PLAN_PATH}}
+- Working directory: {{WORKTREE_PATH}}
+- Branch: feature/{{BRANCH_NAME}}
 
-## Working Directory
-{{WORKTREE_PATH}}
+## TDD Instructions (MANDATORY)
 
-## Instructions
+You MUST follow TDD. Tests come FIRST.
 
-You MUST use TDD (Test-Driven Development):
+### Phase 1: RED (Write Failing Test)
 
-1. **Write Test First**
-   - Create/update test file
-   - Write test that defines expected behavior
-   - Test MUST fail initially (red)
-
-2. **Run Test**
+1. Identify what behavior to test
+2. Create/update test file
+3. Write test that asserts expected behavior
+4. Run test:
    ```bash
-   # Rails example
    bundle exec rails test test/path/to/test.rb
    ```
-   - Confirm test fails with expected error
-   - If test passes, your test is wrong
+5. **Confirm test FAILS** with expected error
+6. If test passes, YOUR TEST IS WRONG - fix it
 
-3. **Write Implementation**
-   - Write minimal code to make test pass
-   - No more than needed
+### Phase 2: GREEN (Make Test Pass)
 
-4. **Run Test Again**
-   - Confirm test passes (green)
-   - If still failing, fix implementation
-
-5. **Refactor (if needed)**
-   - Clean up code
-   - Run tests again to confirm still passing
-
-6. **Commit**
+1. Write MINIMAL code to make test pass
+2. No more than needed
+3. Run test again:
    ```bash
-   git add -A
-   git commit -m "{{TASK_TITLE}}"
+   bundle exec rails test test/path/to/test.rb
+   ```
+4. **Confirm test PASSES**
+5. If still failing, fix implementation
+
+### Phase 3: REFACTOR (Clean Up)
+
+1. Improve code quality if needed
+2. Run tests again to confirm still passing
+3. Run linter:
+   ```bash
+   bundle exec rubocop --autocorrect
    ```
 
-7. **Close Bead**
-   ```bash
-   bd update {{TASK_ID}} --note "Implemented with TDD. Commit: $(git rev-parse --short HEAD)"
-   bd close {{TASK_ID}}
-   ```
+### Phase 4: COMMIT
+
+```bash
+git add -A
+git commit -m "{{TASK_TITLE}}"
+```
+
+### Phase 5: CLOSE BEAD
+
+```bash
+bd update {{TASK_ID}} --note "TDD complete. Commit: $(git rev-parse --short HEAD)"
+bd close {{TASK_ID}}
+```
 
 ## Success Criteria
 [From plan for this task]
@@ -127,60 +163,71 @@ You MUST use TDD (Test-Driven Development):
 
 ## DO NOT
 - Write code before tests
-- Skip the failing test step
+- Skip the RED phase
 - Commit without tests passing
+- Close bead without committing
 ```
 
-#### 3c. Wait for Sub-Agent
+### 4c. Wait for Sub-Agent
 
 Wait for sub-agent to complete. Verify:
 - Task bead is closed
 - Commit was made
 - Tests are passing
 
-#### 3d. Check for Newly-Unblocked Tasks
+### 4d. Check for Newly-Ready Tasks
 
 ```bash
 bd ready --prefix {{PREFIX}}
 ```
 
-Tasks that were blocked on the completed task are now ready.
+Tasks blocked on the completed task are now ready.
 
-### Step 4: Repeat Until Done
+### 4e. Repeat
 
-Continue working ready tasks until all tasks are closed:
+Continue until all implementation tasks are closed:
 
 ```bash
 bd list --parent {{IMPLEMENT_EPIC_ID}} --status open --recursive
 ```
 
-When this returns empty, implementation is complete.
+When empty (only meta-tasks remain), implementation is complete.
 
-### Step 5: Final Verification
+**Close bead**: `bd close {{STEP_2_ID}}`
+
+## Step 5: Final Verification (Task 3)
+
+**Update bead**: `bd update {{STEP_3_ID}} --note "Final verification..."`
 
 Run full test suite:
 ```bash
-# Rails
 bundle exec rails test
+```
 
-# Run linter
+Run linter:
+```bash
 bundle exec rubocop
 ```
 
 All must pass.
 
-### Step 6: Write Implementation Summary
+**Close bead**: `bd close {{STEP_3_ID}}`
+
+## Step 6: Write Implementation Summary (Task 4)
+
+**Update bead**: `bd update {{STEP_4_ID}} --note "Writing summary..."`
 
 Write to: `thoughts/shared/implement/YYYY-MM-DD-{{BRANCH_NAME}}.md`
 
 ```markdown
 ---
 date: [ISO timestamp]
-git_commit: [current commit hash]
+git_commit: [current hash]
 branch: feature/{{BRANCH_NAME}}
 repository: [repo name]
 topic: "{{BRANCH_NAME}} Implementation"
 status: complete
+beads_epic: {{IMPLEMENT_EPIC_ID}}
 ---
 
 # Implementation: {{BRANCH_NAME}}
@@ -188,11 +235,19 @@ status: complete
 ## Summary
 [Brief description of what was implemented]
 
+## TDD Approach
+All code was implemented using Test-Driven Development:
+- Tests written first (RED)
+- Minimal code to pass (GREEN)
+- Refactored as needed
+
 ## Completed Tasks
 
 ### Phase 1: [Name]
-- {{TASK_1}}: [description] — commit {{HASH}}
-- {{TASK_2}}: [description] — commit {{HASH}}
+| Task | Bead | Commit |
+|------|------|--------|
+| {{TASK_1}} | {{BEAD_ID}} | {{HASH}} |
+| {{TASK_2}} | {{BEAD_ID}} | {{HASH}} |
 
 ### Phase 2: [Name]
 ...
@@ -206,59 +261,66 @@ status: complete
 - `test/path/to/test2.rb` — [what it tests]
 
 ## Verification
-- [ ] All unit tests pass
-- [ ] All integration tests pass
-- [ ] Linter passes
-- [ ] Manual testing checklist (for user)
+- [x] All unit tests pass
+- [x] Linter passes
+- [ ] Manual testing (for user)
 
-## Beads
+## Beads Summary
 - IMPLEMENT Epic: {{IMPLEMENT_EPIC_ID}}
-- Total tasks completed: {{COUNT}}
-- All tasks: {{TASK_IDS_WITH_COMMITS}}
+- Total tasks: {{COUNT}}
+- All tasks closed: ✓
 
 ## PR Ready
-Branch: feature/{{BRANCH_NAME}}
-Tests passing: ✓
+- Branch: feature/{{BRANCH_NAME}}
+- Tests: ✓
+- Linter: ✓
 ```
 
-### Step 7: Close IMPLEMENT Epic
+**Close bead**: `bd close {{STEP_4_ID}}`
 
-```bash
-bd close {{IMPLEMENT_EPIC_ID}}
-```
+## Step 7: Handoff (Task 5)
 
-### Step 8: Handoff
+**Update bead**: `bd update {{STEP_5_ID}} --note "Handoff..."`
 
-1. Commit summary: `git add -A && git commit -m "Implementation complete: {{BRANCH_NAME}}"`
-2. Push branch: `git push`
-3. Update PR description
+1. Commit summary:
+   ```bash
+   git add -A
+   git commit -m "Implementation complete: {{BRANCH_NAME}}"
+   ```
+
+2. Push:
+   ```bash
+   git push
+   ```
+
+3. Update PR if needed
+
 4. Present to user:
+   ```
+   Implementation complete! 🎉
 
-```
-Implementation complete! 🎉
+   📄 Summary: thoughts/shared/implement/YYYY-MM-DD-{{BRANCH_NAME}}.md
 
-📄 Summary: thoughts/shared/implement/YYYY-MM-DD-{{BRANCH_NAME}}.md
+   Completed:
+   - {{TASK_COUNT}} tasks implemented with TDD
+   - {{TEST_COUNT}} tests added
+   - All tests passing ✓
+   - Linter passing ✓
 
-Completed:
-- {{TASK_COUNT}} tasks implemented
-- {{TEST_COUNT}} tests added
-- All tests passing ✓
-- Linter passing ✓
+   Manual verification needed:
+   - [ ] [Manual test 1 from plan]
+   - [ ] [Manual test 2 from plan]
 
-Manual verification needed:
-- [ ] [Manual test 1 from plan]
-- [ ] [Manual test 2 from plan]
+   Beads:
+   - IMPLEMENT Epic: {{IMPLEMENT_EPIC_ID}} — CLOSED
+   - All child tasks: CLOSED
 
-PR ready for review: {{PR_URL}}
-```
+   PR ready for review.
+   ```
 
-## Context Management
+**Close bead**: `bd close {{STEP_5_ID}}`
 
-**At 55% context**: 
-1. Note which tasks are complete and which are remaining
-2. Run `create_handoff` command
-3. In new session, run `resume_handoff`
-4. Check `bd ready` to continue
+5. Close IMPLEMENT epic: `bd close {{IMPLEMENT_EPIC_ID}}`
 
 ## Error Handling
 
@@ -273,19 +335,29 @@ PR ready for review: {{PR_URL}}
 
 ### Blocked Task Won't Unblock
 1. Check dependencies: `bd show {{TASK_ID}}`
-2. Verify blocker is actually closed
+2. Verify blocker is closed
 3. If dependency issue, fix with `bd unblock`
 
 ### Sub-Agent Fails
 1. Check sub-agent output
-2. If code issue, spawn new sub-agent with more context
+2. Spawn new sub-agent with more context
 3. If fundamental problem, escalate to user
+
+## Context Management
+
+**At 55% context**:
+1. Note which tasks are complete (check beads)
+2. Run `create_handoff` command
+3. In new session, run `resume_handoff`
+4. Check `bd list --parent {{EPIC_ID}} --status open`
+5. Run `bd ready` to continue
 
 ## Important Notes
 
 - **TDD is mandatory** — Tests before code, always
+- **RED-GREEN-REFACTOR** — Follow the cycle
 - **One task at a time** — Complete before starting next
 - **Commit per task** — Atomic, reviewable commits
-- **Close beads** — Keeps state accurate
+- **Close beads** — Shows progress, enables resume
 - **Check ready tasks** — Dependencies auto-unblock
 - **Full test suite at end** — Catch any regressions

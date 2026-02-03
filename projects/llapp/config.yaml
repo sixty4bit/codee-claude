@@ -1,0 +1,49 @@
+# LLAPP Project Configuration
+# Leverage Leadership Application
+
+name: LLAPP
+repo: leverage-leadership/llapp
+local_path: /Users/sia/clawd/personas/codee/llapp
+worktree_base: ~/wt/llapp
+
+# Stack
+stack: rails
+ruby_version: "3.4"
+node_version: "22"
+database: sqlite
+queue: solid_queue
+
+# Beads
+beads_prefix: llapp
+
+# Deployment
+deploy_target: heroku
+deploy_branch: main
+
+# Services (LaunchAgents)
+services:
+  web: com.codee.llapp-web
+  worker: com.codee.llapp-worker
+
+# URLs
+urls:
+  local: http://localhost:3077
+  public: https://llappy.ngrok.app
+
+# Key Paths
+paths:
+  commands: .claude/commands/
+  jobs: app/jobs/
+  models: app/models/
+  views: app/views/
+
+# Testing
+test_command: "bundle exec rails test"
+lint_command: "bundle exec rubocop"
+
+# Notes
+notes: |
+  - Uses HAML, not ERB
+  - Hotwire/Turbo for interactivity
+  - Bootstrap for CSS (no Tailwind)
+  - gpt-5.2 as default LLM

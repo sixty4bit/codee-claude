@@ -7,138 +7,155 @@
 When Carl gives a "vibe instruction" (informal, high-level request), use this process to translate it into a structured technical plan before writing any code.
 
 **Don't:** Jump straight to coding from vibes.
-**Do:** Clarify → Structure → Reference agents → Execute.
+**Do:** Clarify → Research → Plan → Implement.
 
 ---
 
-## The Translation Process
+## The Full Process (4 Phases)
 
-### 1. CLARIFY — Extract the Core Intent
+### Phase 1: CLARIFY
 
-Ask yourself (or Carl, if unclear):
-- **What problem are we solving?**
-- **Who benefits and how?**
-- **What's the expected user flow?**
-- **What does "done" look like?**
+**Goal:** Extract the core intent and document requirements.
 
-Write a one-sentence summary of the feature.
+1. **Create branch + draft PR immediately:**
+   ```bash
+   git checkout -b feature/{{BRANCH_NAME}}
+   git push -u origin feature/{{BRANCH_NAME}}
+   gh pr create --draft --title "{{FEATURE_NAME}}"
+   ```
 
-### 2. IDENTIFY — What Kind of Work Is This?
+2. **Ask clarifying questions:**
+   - What problem are we solving?
+   - Who benefits and how?
+   - What's the expected user flow?
+   - What does "done" look like?
 
-| Type | Agent to Reference | Key Patterns |
-|------|-------------------|--------------|
+3. **Create CLARIFY epic in beads:**
+   ```bash
+   cd /Users/sia/clawd/personas/codee/codee-claude
+   bd create "[CLARIFY] {{FEATURE_NAME}}" --prefix llapp -t epic
+   ```
+
+4. **Write clarify doc:** `thoughts/shared/clarify/YYYY-MM-DD-{{BRANCH_NAME}}.md`
+   - Summary of requirements
+   - User answers to questions
+   - Acceptance criteria
+   - Out of scope items
+
+5. **Close CLARIFY epic when done.**
+
+---
+
+### Phase 2: RESEARCH
+
+**Goal:** Understand the codebase and document findings.
+
+**Run the `research_codebase` command:**
+```
+/research_codebase {{CLARIFY_EPIC_ID}} thoughts/shared/clarify/YYYY-MM-DD-{{BRANCH_NAME}}.md llapp
+```
+
+This command will:
+- Create a RESEARCH epic in beads
+- Spawn sub-agents to investigate the codebase
+- Document current state, patterns, and constraints
+- Write research doc: `thoughts/shared/research/YYYY-MM-DD-{{BRANCH_NAME}}.md`
+- Create PLAN phase beads when complete
+
+**Wait for RESEARCH phase to complete before proceeding.**
+
+---
+
+### Phase 3: PLAN
+
+**Goal:** Create detailed implementation plan with success criteria.
+
+**Run the `create_plan` command:**
+```
+/create_plan {{RESEARCH_EPIC_ID}} thoughts/shared/research/YYYY-MM-DD-{{BRANCH_NAME}}.md thoughts/shared/clarify/YYYY-MM-DD-{{BRANCH_NAME}}.md llapp
+```
+
+This command will:
+- Create a PLAN epic in beads
+- Cross-reference requirements from CLARIFY
+- Develop plan structure interactively
+- Write plan doc: `thoughts/shared/plans/YYYY-MM-DD-{{BRANCH_NAME}}.md`
+- Create IMPLEMENT epic with child tasks
+- Set up task dependencies
+
+**Wait for PLAN phase to complete before proceeding.**
+
+---
+
+### Phase 4: IMPLEMENT
+
+**Goal:** Execute the plan with TDD.
+
+**Run the `implement_plan` command:**
+```
+/implement_plan {{IMPLEMENT_EPIC_ID}} thoughts/shared/plans/YYYY-MM-DD-{{BRANCH_NAME}}.md llapp
+```
+
+This command will:
+- Work through IMPLEMENT tasks in dependency order
+- Write tests FIRST (TDD)
+- Pause for manual verification after each phase
+- Update beads as tasks complete
+- Push commits and update PR
+
+---
+
+## Quick Reference
+
+| Phase | Epic Type | Command | Output |
+|-------|-----------|---------|--------|
+| CLARIFY | `[CLARIFY]` | (manual) | `clarify/YYYY-MM-DD-{{BRANCH}}.md` |
+| RESEARCH | `[RESEARCH]` | `/research_codebase` | `research/YYYY-MM-DD-{{BRANCH}}.md` |
+| PLAN | `[PLAN]` | `/create_plan` | `plans/YYYY-MM-DD-{{BRANCH}}.md` |
+| IMPLEMENT | `[IMPLEMENT]` | `/implement_plan` | Working code + tests |
+
+---
+
+## Beads Directory
+
+All beads tracked in central repo:
+```
+/Users/sia/clawd/personas/codee/codee-claude/.beads/
+```
+
+Common commands:
+```bash
+cd /Users/sia/clawd/personas/codee/codee-claude
+bd list                           # List open issues
+bd list --parent {{EPIC_ID}}      # List tasks under epic
+bd show {{ID}}                    # Show issue details
+bd close {{ID}}                   # Close issue
+bd create "[USER] Question" ...   # Create blocking question
+```
+
+---
+
+## Coding Agent References
+
+| Type | Agent | Key Patterns |
+|------|-------|--------------|
 | New CRUD feature | `coding/crud-agent.md` | Resources, not custom actions |
 | Database changes | `coding/migration-agent.md` | Safe migrations, rollback plan |
 | Model logic | `coding/model-agent.md` | Rich models, concerns |
 | JavaScript/UI | `coding/stimulus-agent.md` | Small, focused controllers |
 | Real-time updates | `coding/turbo-agent.md` | Frames and Streams |
 | Background work | `coding/jobs-agent.md` | Delayed jobs |
-| Performance | `coding/caching-agent.md` | Cache strategies |
-| Fixing code | `coding/refactoring-agent.md` | Extract, rename, simplify |
 | Tests | `coding/test-agent.md` | TDD: red → green → refactor |
 
-### 3. STRUCTURE — Write the Technical Spec
-
-Create a structured plan with these sections:
-
-```markdown
-## Feature: [Name]
-
-### Summary
-One sentence describing what we're building.
-
-### User Story
-As a [user type], I want [action] so that [benefit].
-
-### Acceptance Criteria
-- [ ] Criterion 1
-- [ ] Criterion 2
-- [ ] Criterion 3
-
-### Technical Approach
-- **Models:** What models/concerns are involved?
-- **Controllers:** What resources (CRUD)?
-- **Views:** What templates/partials?
-- **Routes:** What URL structure?
-- **Tests:** What test cases?
-
-### Agent References
-- Primary: [which coding agent]
-- Also read: [supporting agents]
-
-### Questions for Carl
-- List anything unclear before starting
-```
-
-### 4. VALIDATE — Sanity Check
-
-Before coding, confirm:
-- [ ] Follows CRUD-everything pattern (no custom actions)?
-- [ ] Models have intention-revealing methods?
-- [ ] Tests written FIRST (TDD)?
-- [ ] No unnecessary services/patterns?
-- [ ] Matches existing codebase style?
-
-### 5. EXECUTE — Use Sub-Agents
-
-For implementation:
-1. **Spawn a sub-agent** for the actual coding work
-2. **Include the structured spec** in the task
-3. **Reference the relevant agent files** in instructions
-4. **Require tests pass** before PR
-
 ---
 
-## Example Translation
+## Critical Rules
 
-### Vibe Input
-> "I want users to be able to favorite sweeps"
-
-### Structured Output
-
-```markdown
-## Feature: Sweep Favorites
-
-### Summary
-Users can favorite sweeps to save them for quick access.
-
-### User Story
-As a user, I want to favorite sweeps so that I can quickly find ones I'm interested in.
-
-### Acceptance Criteria
-- [ ] User can favorite a sweep from the sweep card
-- [ ] User can unfavorite a sweep
-- [ ] User can view all their favorites
-- [ ] Favorites persist across sessions
-
-### Technical Approach
-- **Models:** `Favorite` (user_id, sweep_id), `User` has_many :favorites, `Sweep` has_many :favorites
-- **Controllers:** `FavoritesController` (create, destroy, index)
-- **Views:** Heart icon on sweep cards, favorites index page
-- **Routes:** `/favorites`, `/sweeps/:id/favorites`
-- **Tests:** Model tests for associations, controller tests for CRUD, system test for flow
-
-### Agent References
-- Primary: crud-agent.md
-- Also read: test-agent.md, model-agent.md
-
-### Questions for Carl
-- Should favorites be private or visible to others?
-- Any limit on number of favorites?
-```
-
----
-
-## Quick Checklist
-
-When you receive a vibe instruction:
-
-1. [ ] Summarize the intent in one sentence
-2. [ ] Identify which coding agents apply
-3. [ ] Write structured spec with acceptance criteria
-4. [ ] List any questions before starting
-5. [ ] Spawn sub-agent with spec + agent references
-6. [ ] Require passing tests before PR
+1. **Never skip phases** — Each phase builds on the previous
+2. **Beads track everything** — Every step is a task
+3. **[USER] beads block progress** — Must close before proceeding  
+4. **TDD is mandatory** — Tests before code
+5. **Manual verification required** — Pause after each implementation phase
 
 ---
 

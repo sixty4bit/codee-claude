@@ -2,6 +2,18 @@
 
 *Turn fuzzy ideas into structured specs that produce excellent code.*
 
+---
+
+> ⚠️ **BEADS LOCATION REMINDER**
+> 
+> All beads are tracked in the **central repo**, not in llapp:
+> ```
+> /Users/sia/clawd/personas/codee/codee-claude/.beads/
+> ```
+> Always `cd` to codee-claude before running `bd` commands.
+
+---
+
 ## Purpose
 
 When Carl gives a "vibe instruction" (informal, high-level request), use this process to translate it into a structured technical plan before writing any code.
